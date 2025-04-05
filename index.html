@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stylish Tic Tac Toe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2, #ff6a00);
+      background-size: 600% 600%;
+      animation: gradientBG 15s ease infinite;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 3rem;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 15px;
+      margin-top: 30px;
+      position: relative;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5rem;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.3s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    .cell:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .status {
+      margin-top: 25px;
+      font-size: 1.5rem;
+      padding: 10px 25px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(6px);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    button {
+      margin-top: 25px;
+      padding: 12px 30px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      color: white;
+      cursor: pointer;
+      transition: 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    button:hover {
+      background: linear-gradient(to right, #9333ea, #06b6d4);
+      transform: scale(1.05);
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 30px;
+      margin-top: 10px;
+      font-size: 1.3rem;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 12px 30px;
+      border-radius: 25px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .start-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.85), rgba(0,0,0,0.85));
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    .start-screen h2 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+    }
+
+    .start-screen button {
+      margin: 10px;
+      padding: 12px 35px;
+      font-size: 1.1rem;
+      border-radius: 25px;
+      background: linear-gradient(to right, #10b981, #06b6d4);
+    }
+
+    .start-screen button:hover {
+      background: linear-gradient(to right, #4f46e5, #9333ea);
+    }
+
+    .win-line {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(to right, #22c55e, #16a34a);
+      border-radius: 6px;
+      transform-origin: left center;
+      animation: drawLine 0.6s ease forwards;
+      box-shadow: 0 0 10px #22c55e, 0 0 20px #16a34a;
+      z-index: 10;
+    }
+
+    @keyframes drawLine {
+      from { width: 0; opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="start-screen" id="startScreen">
+    <h2>Select Game Mode</h2>
+    <button onclick="startGame('player')">Play vs Player</button>
+    <button onclick="startGame('computer')">Play vs Computer</button>
+  </div>
+
+  <h1>Tic Tac Toe</h1>
+
+  <div class="scoreboard">
+    <div>X Wins: <span id="scoreX">0</span></div>
+    <div>O Wins: <span id="scoreO">0</span></div>
+  </div>
+
+  <div class="board" id="board"></div>
+  <div class="status" id="status"></div>
+  <button onclick="resetGame()">Restart</button>
+
+  <script>
+    const board = document.getElementById("board");
+    const statusText = document.getElementById("status");
+    const startScreen = document.getElementById("startScreen");
+    const scoreX = document.getElementById("scoreX");
+    const scoreO = document.getElementById("scoreO");
+
+    let cells = Array(9).fill("");
+    let currentPlayer = "X";
+    let gameOver = false;
+    let mode = "player";
+    let scores = { X: 0, O: 0 };
+    let winLine;
+
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      startScreen.style.display = "none";
+      resetGame();
+    }
+
+    function renderBoard() {
+      board.innerHTML = "";
+      cells.forEach((cell, i) => {
+        const cellDiv = document.createElement("div");
+        cellDiv.className = "cell";
+        cellDiv.textContent = cell;
+        cellDiv.addEventListener("click", () => makeMove(i));
+        board.appendChild(cellDiv);
+      });
+    }
+
+    function drawWinLine([a, b, c]) {
+      if (winLine) winLine.remove();
+
+      const positions = [a, b, c].map(i => board.children[i].getBoundingClientRect());
+      const boardRect = board.getBoundingClientRect();
+      const x1 = positions[0].left + positions[0].width / 2;
+      const y1 = positions[0].top + positions[0].height / 2;
+      const x2 = positions[2].left + positions[2].width / 2;
+      const y2 = positions[2].top + positions[2].height / 2;
+
+      const length = Math.hypot(x2 - x1, y2 - y1);
+      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+      winLine = document.createElement("div");
+      winLine.className = "win-line";
+      winLine.style.width = `${length}px`;
+      winLine.style.left = `${x1 - boardRect.left}px`;
+      winLine.style.top = `${y1 - boardRect.top}px`;
+      winLine.style.transform = `rotate(${angle}deg)`;
+
+      board.appendChild(winLine);
+    }
+
+    function makeMove(index) {
+      if (cells[index] || gameOver) return;
+      cells[index] = currentPlayer;
+      renderBoard();
+      const winCombo = checkWinner();
+      if (winCombo) {
+        statusText.textContent = `${currentPlayer} wins!`;
+        scores[currentPlayer]++;
+        updateScore();
+        drawWinLine(winCombo);
+        gameOver = true;
+        return;
+      } else if (!cells.includes("")) {
+        statusText.textContent = "It's a draw!";
+        gameOver = true;
+        return;
+      }
+
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      statusText.textContent = `Turn: ${currentPlayer}`;
+
+      if (mode === "computer" && currentPlayer === "O") {
+        setTimeout(computerMove, 300);
+      }
+    }
+
+    function computerMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < cells.length; i++) {
+        if (cells[i] === "") {
+          cells[i] = "O";
+          let score = minimax(cells, 0, false);
+          cells[i] = "";
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      makeMove(move);
+    }
+
+    function minimax(boardState, depth, isMaximizing) {
+      const winner = checkWinner();
+      if (winner === "O") return 10 - depth;
+      if (winner === "X") return depth - 10;
+      if (!boardState.includes("")) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < boardState.length; i++) {
+          if (boardState[i] === "") {
+            boardState[i] = "O";
+            let score = minimax(boardState, depth + 1, false);
+            boardState[i] = "";
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < boardState.length; i++) {
+          if (boardState[i] === "") {
+            boardState[i] = "X";
+            let score = minimax(boardState, depth + 1, true);
+            boardState[i] = "";
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    function checkWinner() {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      for (let combo of wins) {
+        const [a,b,c] = combo;
+        if (cells[a] && cells[a] === cells[b] && cells[a] === cells[c]) {
+          return combo;
+        }
+      }
+      return null;
+    }
+
+    function updateScore() {
+      scoreX.textContent = scores.X;
+      scoreO.textContent = scores.O;
+    }
+
+    function resetGame() {
+      cells = Array(9).fill("");
+      currentPlayer = "X";
+      gameOver = false;
+      statusText.textContent = `Turn: ${currentPlayer}`;
+      if (winLine) winLine.remove();
+      renderBoard();
+    }
+  </script>
+</body>
+</html>
